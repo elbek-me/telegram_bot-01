@@ -1,2 +1,5 @@
 pyTelegramBotAPI==4.33.0
 python-dotenv==1.2.2
+deep-translator
+wikipedia
+yt-dlp
