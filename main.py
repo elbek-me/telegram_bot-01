@@ -10,17 +10,12 @@ import wikipedia
 from google import genai
 from dotenv import load_dotenv
 
-# .env faylini joriy papkadan qidirib yuklash
 base_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(base_dir, '.env')
 load_dotenv(dotenv_path)
 
 TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_KEY")
-
-# AGAR .env baribir o'qimasa, muammo bo'lmasligi uchun tokenlarni shu yerga ham yozib qo'yishingiz mumkin:
-if not TOKEN:
-    TOKEN = "7510255374:AAHQvK0tH7Lh_XzYV4Z0P..."  # <--- Skrinshotdagi tokeningizni shu yerga qo'ysangiz ham bo'ladi
 
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang("uz")
@@ -34,7 +29,6 @@ CHANNELS_FILE = os.path.join(base_dir, "kanallar.json")
 
 quiz_sessions = {}
 
-# --- Ma'lumotlar bilan ishlash ---
 def load_json_data(file_path):
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         try:
@@ -48,11 +42,9 @@ def save_json_data(file_path, data):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-# --- Dinamik Tugmalar (Keyboards) ---
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     
-    # Portfolio saytingiz havolasi (O'zingiznikiga almashtiring)
     portfolio_url = "https://wwwwpixelin.lovable.app" 
     
     # Mini App ochadigan maxsus tugma
@@ -62,7 +54,7 @@ def main_menu():
     )
     
     markup.add(
-        portfolio_button, # Birinchi bo'lib bosh sahifada ko'rinadi
+        portfolio_button, 
         types.KeyboardButton("📢 Sevimli kanallar"),
         types.KeyboardButton("➕ Lug'atga so'z qo'shish"),
         types.KeyboardButton("🧠 So'z takrorlash"),
@@ -110,7 +102,6 @@ def send_large_message(chat_id, text):
         for i in range(0, len(text), 4000):
             bot.send_message(chat_id, text[i:i+4000])
 
-# --- Handlers ---
 @bot.message_handler(commands=['start'])
 def start(message):
     chat_id = message.chat.id
@@ -147,7 +138,6 @@ def handle_menu(message):
         bot.register_next_step_handler(msg, process_wiki)
 
 
-# --- Dinamik Unit Yaratish va Lug'at kiritish ---
 def choose_unit_for_add(message):
     if message.text == "⬅️ Asosiy menyuga qaytish": return start(message)
     
@@ -197,7 +187,6 @@ def add_word_logic(message, unit_name):
         line = line.strip()
         if not line:
             continue
-        # Telefonlar o'zgartirib yuboradigan uzun chiziqchalarni tekshirish va to'g'rilash
         normalized = line.replace('–', '-').replace('—', '-')
         if '-' in normalized:
             data[uid][unit_name].append(normalized)
@@ -216,7 +205,6 @@ def add_word_logic(message, unit_name):
     msg = bot.send_message(message.chat.id, res, parse_mode="Markdown", reply_markup=back_markup())
     bot.register_next_step_handler(msg, add_word_logic, unit_name=unit_name)
 
-# --- Aqlli va To'liq 20-0 Taymerli Quiz Tizimi ---
 def choose_unit_for_quiz(message):
     if message.text == "⬅️ Asosiy menyuga qaytish": return start(message)
     start_quiz(message, unit_name=message.text, index=0)
@@ -247,7 +235,6 @@ def start_quiz(message, unit_name, index=0):
             "active": True, "quiz_id": quiz_id, "msg_id": msg.message_id
         }
         
-        # Taymer ishga tushadi: 20 dan boshlab 0 gacha soniyalarni kamaytiradi
         threading.Thread(target=countdown_worker, args=(chat_id, msg.message_id, unit_name, question, answer, quiz_id)).start()
         bot.register_next_step_handler(msg, check_quiz_answer)
     else:
@@ -255,11 +242,9 @@ def start_quiz(message, unit_name, index=0):
 
 def countdown_worker(chat_id, msg_id, unit_name, question, answer, quiz_id):
     for remaining in range(20, -1, -1):
-        # Agar foydalanuvchi javob bergan bo'lsa yoki boshqa savolga o'tgan bo'lsa taymer to'xtaydi
         if chat_id not in quiz_sessions or not quiz_sessions[chat_id].get('active') or quiz_sessions[chat_id].get('quiz_id') != quiz_id:
             return
             
-        # Har bir soniyada xabarni yangilab borish (Telegram limitlaridan oshmaslik uchun dinamik edit)
         try:
             bot.edit_message_text(
                 chat_id=chat_id, message_id=msg_id,
@@ -269,7 +254,6 @@ def countdown_worker(chat_id, msg_id, unit_name, question, answer, quiz_id):
         except: pass
         time.sleep(1)
 
-    # Vaqt 0 ga yetganda bajariladigan qism
     if chat_id in quiz_sessions and quiz_sessions[chat_id].get('active') and quiz_sessions[chat_id].get('quiz_id') == quiz_id:
         quiz_sessions[chat_id]['active'] = False
         bot.send_message(chat_id, f"⏰ **Vaqt tugadi!**\n\nTo'g'ri javob: *{answer}* edi.", parse_mode="Markdown", reply_markup=quiz_menu())
@@ -299,7 +283,6 @@ def check_quiz_answer(message):
     else:
         bot.send_message(chat_id, f"❌ Noto'g'ri!\n\nTo'g'ri javob: *{correct_answer}* edi.", parse_mode="Markdown", reply_markup=quiz_menu())
 
-# --- Qolgan yordamchi modullar ---
 def process_youtube_dl(message):
     if message.text == "⬅️ Asosiy menyuga qaytish": return start(message)
     bot.send_message(message.chat.id, "📥 Video yuklash tizimi faollashtirilmoqda, iltimos kuting...")
