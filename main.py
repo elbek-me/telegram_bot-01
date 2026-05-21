@@ -81,6 +81,13 @@
 #     bot.infinity_polling()
 
 
+
+
+
+
+
+
+
 import os
 import json
 import random
@@ -90,7 +97,6 @@ import telebot
 from telebot import types
 from deep_translator import GoogleTranslator
 import wikipedia
-from google import genai
 from dotenv import load_dotenv
 from transliterate import to_cyrillic, to_latin
 
@@ -100,7 +106,6 @@ dotenv_path = os.path.join(base_dir, '.env')
 load_dotenv(dotenv_path)
 
 TOKEN = os.getenv("BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_KEY")
 
 if not TOKEN:
     # Agarda .env ishlamasa, tokeningizni to'g'ridan-to'g'ri shu yerga yozishingiz ham mumkin
@@ -109,12 +114,13 @@ if not TOKEN:
 bot = telebot.TeleBot(TOKEN)
 wikipedia.set_lang("uz")
 
-ai_client = None
-if GEMINI_API_KEY:
-    ai_client = genai.Client(api_key=GEMINI_API_KEY)
-
 DATA_FILE = os.path.join(base_dir, "lugat.json")
 CHANNELS_FILE = os.path.join(base_dir, "kanallar.json")
+MEDIA_DIR = os.path.join(base_dir, "saqlangan_medialar")
+
+# Media saqlash papkasini tekshirish va yaratish
+if not os.path.exists(MEDIA_DIR):
+    os.makedirs(MEDIA_DIR)
 
 quiz_sessions = {}
 
@@ -148,7 +154,7 @@ def main_menu():
     markup.row(portfolio_button) # Alohida qatorda keng turishi uchun
     markup.add(
         types.KeyboardButton("🔤 Transliteratsiya (Lotin/Kirill)"),
-        types.KeyboardButton("🤖 AI bilan suhbat"),
+        types.KeyboardButton("💾 Video saqlash"),
         types.KeyboardButton("📢 Sevimli kanallar"),
         types.KeyboardButton("➕ Lug'atga so'z qo'shish"),
         types.KeyboardButton("🧠 So'z takrorlash"),
@@ -228,9 +234,9 @@ def handle_menu(message):
         bot.send_message(chat_id, info_text, parse_mode="Markdown", reply_markup=back_markup())
         bot.register_next_step_handler(message, process_transliteration_step)
         
-    elif text == "🤖 AI bilan suhbat":
-        msg = bot.send_message(chat_id, "Savolingizni bering:", reply_markup=back_markup())
-        bot.register_next_step_handler(msg, process_ai_chat)
+    elif text == "💾 Video saqlash":
+        msg = bot.send_message(chat_id, "📥 Menga saqlamoqchi bo'lgan **videongizni** yoki **faylingizni** yuboring:", parse_mode="Markdown", reply_markup=back_markup())
+        bot.register_next_step_handler(msg, save_media_handler)
         
     elif text == "📢 Sevimli kanallar":
         bot.send_message(chat_id, "📢 Kanallar bo'limi:", reply_markup=channels_menu())
@@ -262,7 +268,7 @@ def handle_menu(message):
         msg = bot.send_message(chat_id, "Mavzu yozing:", reply_markup=back_markup())
         bot.register_next_step_handler(msg, process_wiki)
 
-# --- Transliteratsiya Qadami (Tugma bosilgandan keyingi holat) ---
+# --- Transliteratsiya Qadami ---
 def process_transliteration_step(message):
     if message.text == "⬅️ Asosiy menyuga qaytish": 
         return bot.send_message(message.chat.id, "Asosiy menyudasiz:", reply_markup=main_menu())
@@ -274,19 +280,42 @@ def process_transliteration_step(message):
         bot.reply_to(message, to_latin(text))
     bot.register_next_step_handler(message, process_transliteration_step)
 
-# --- AI Bilan Suhbat ---
-def process_ai_chat(message):
+# --- 💾 Video va Media Saqlash Tizimi ---
+def save_media_handler(message):
     if message.text == "⬅️ Asosiy menyuga qaytish": return start(message)
-    if not ai_client:
-        bot.send_message(message.chat.id, "⚠️ AI kaliti sozlanmagan.", reply_markup=main_menu())
-        return
-    bot.send_chat_action(message.chat.id, 'typing')
-    try:
-        response = ai_client.models.generate_content(model='gemini-1.5-flash', contents=message.text)
-        bot.reply_to(message, response.text)
-    except:
-        bot.reply_to(message, "⚠️ AI ulanishda xato yuz berdi.")
-    bot.register_next_step_handler(message, process_ai_chat)
+    
+    file_id = None
+    file_name = "noma'lum_fayl"
+    
+    # Xabar turini aniqlash va file_id ni olish
+    if message.video:
+        file_id = message.video.file_id
+        file_name = message.video.file_name if message.video.file_name else f"video_{int(time.time())}.mp4"
+    elif message.document:
+        file_id = message.document.file_id
+        file_name = message.document.file_name
+    elif message.photo:
+        file_id = message.photo[-1].file_id
+        file_name = f"photo_{int(time.time())}.jpg"
+    
+    if file_id:
+        bot.send_message(message.chat.id, "⏳ Fayl yuklab olinmoqda va saqlanmoqda...")
+        try:
+            file_info = bot.get_file(file_id)
+            downloaded_file = bot.download_file(file_info.file_path)
+            
+            # Faylni kompyuterga yozish
+            save_path = os.path.join(MEDIA_DIR, file_name)
+            with open(save_path, 'wb') as new_file:
+                new_file.write(downloaded_file)
+                
+            bot.send_message(message.chat.id, f"✅ Muvaffaqiyatli saqlandi!\n📂 Nom: `{file_name}`", parse_mode="Markdown")
+        except Exception as e:
+            bot.send_message(message.chat.id, f"❌ Faylni saqlashda xatolik yuz berdi: {e}")
+    else:
+        bot.send_message(message.chat.id, "⚠️ Iltimos, faqat video yoki fayl yuboring!")
+        
+    bot.register_next_step_handler(message, save_media_handler)
 
 # --- Sevimli kanallar ---
 def add_channel(message):
