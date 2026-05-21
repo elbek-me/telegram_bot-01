@@ -47,7 +47,6 @@ def main_menu():
     
     portfolio_url = "https://wwwwpixelin.lovable.app" 
     
-    # Mini App ochadigan maxsus tugma
     portfolio_button = types.KeyboardButton(
         text="💼 Mening Portfoliom", 
         web_app=types.WebAppInfo(url=portfolio_url)
@@ -69,7 +68,6 @@ def dynamic_units_menu(chat_id, mode="add"):
     data = load_json_data(DATA_FILE)
     uid = str(chat_id)
     
-    # Foydalanuvchiga tegishli mavjud unitlarni bazadan olish
     user_units = list(data.get(uid, {}).keys()) if isinstance(data.get(uid), dict) else []
     
     if mode == "add":
@@ -104,10 +102,13 @@ def send_large_message(chat_id, text):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    chat_id = message.chat.id
-    if chat_id in quiz_sessions:
-        quiz_sessions[chat_id]['active'] = False
-    bot.send_message(chat_id, "Bot faol! Kerakli bo'limni tanlang:", reply_markup=main_menu())
+    user_name = message.from_user.first_name if message.from_user.first_name else "Foydalanuvchi" 
+    user_name = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
+    bot.send_message(
+        message.chat.id, 
+        f"Xush kelibsiz, {user_name}! Sizga qanday yordam bera olaman? 👇\n\nKerakli bo'limni tanlang:", 
+        reply_markup=main_menu()
+    )
 
 @bot.message_handler(content_types=['text'])
 def handle_menu(message):
