@@ -477,7 +477,6 @@ def check_quiz_answer(message):
     else:
         bot.send_message(chat_id, f"❌ Noto'g'ri!\n\nTo'g'ri javob: *{correct_answer}* edi.", parse_mode="Markdown", reply_markup=quiz_menu())
 
-# --- YouTube, Tarjimon va Wiki ---
 def process_youtube_dl(message):
     if message.text == "⬅️ Asosiy menyuga qaytish": return start(message)
     bot.send_message(message.chat.id, "📥 Video qidirilmoqda/yuklanmoqda...")
