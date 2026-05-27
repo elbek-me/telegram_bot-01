@@ -51,7 +51,7 @@ def save_json_data(file_path, data):
 
 # PORTFOLIO MINI APP LINKI
 PORTFOLIO_URL = "https://wwwwpixelin.lovable.app"
-
+    
 # --- Menyular ---
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
