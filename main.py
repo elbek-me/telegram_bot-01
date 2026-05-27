@@ -46,11 +46,11 @@ def load_json_data(file_path):
     return {}
 
 def save_json_data(file_path, data):
-    with open(file_path, "w", encoding="utf-8") as f:
+    with open(file_path, "w", encoding="utf-8") as f:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 # PORTFOLIO MINI APP LINKI
-PORTFOLIO_URL = "https://lovable.dev/projects/9ef9619b-c46e-4fa1-9f2d-ceb3d0500f41"
+PORTFOLIO_URL = "https://wwwwpixelin.lovable.app"
 
 # --- Menyular ---
 def main_menu():
